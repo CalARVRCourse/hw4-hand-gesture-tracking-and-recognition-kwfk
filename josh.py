@@ -74,48 +74,60 @@ while True:
 
     if (ret>2):  
         try:
-            statsSortedByArea = stats[np.argsort(stats[:, 4])]
-            roi = statsSortedByArea[-3][0:4]  
-            x, y, w, h = roi  
-            subImg = labeled_img[y:y+h, x:x+w]  
-            subImg = cv2.cvtColor(subImg, cv2.COLOR_BGR2GRAY);  
-            _, contours, _ = cv2.findContours(subImg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)  
-            maxCntLength = 0  
-            for i in range(0,len(contours)):  
-                cntLength = len(contours[i])  
-                if(cntLength>maxCntLength):  
-                    cnt = contours[i]  
-                    maxCntLength = cntLength  
-            if(maxCntLength>=5):  
-                ellipseParam = cv2.fitEllipse(cnt)
-                (x,y),(MA,ma),angle = cv2.fitEllipse(cnt)
-                print((x, y), (MA, ma))
-                subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB);  
-                subImg = cv2.ellipse(subImg,ellipseParam,(0,255,0),2)  
+            # statsSortedByArea = stats[np.argsort(stats[:, 4])]
+            # roi = statsSortedByArea[-3][0:4]  
+            # x, y, w, h = roi  
+            # subImg = labeled_img[y:y+h, x:x+w]  
+            # subImg = cv2.cvtColor(subImg, cv2.COLOR_BGR2GRAY);  
+            # _, contours, _ = cv2.findContours(subImg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)  
+            # maxCntLength = 0  
+            # for i in range(0,len(contours)):  
+            #     cntLength = len(contours[i])  
+            #     if(cntLength>maxCntLength):  
+            #         cnt = contours[i]  
+            #         maxCntLength = cntLength  
+            # if(maxCntLength>=5):  
+            #     ellipseParam = cv2.fitEllipse(cnt)
+            #     (x,y),(MA,ma),angle = cv2.fitEllipse(cnt)
+            #     print((x, y), (MA, ma))
+            #     subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB);  
+            #     subImg = cv2.ellipse(subImg,ellipseParam,(0,255,0),2)  
               
-            subImg = cv2.resize(subImg, (0,0), fx=3, fy=3)
+            # subImg = cv2.resize(subImg, (0,0), fx=3, fy=3)
 
-            # _, contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)       
-            # contours=sorted(contours,key=cv2.contourArea,reverse=True)       
-            # if len(contours)>1:  
-            #     largestContour = contours[0]  
-            #     hull = cv2.convexHull(largestContour, returnPoints = False)
-            #     for cnt in contours[:1]:  
-            #         defects = cv2.convexityDefects(cnt,hull)  
-            #         if(not isinstance(defects,type(None))):  
-            #             for i in range(defects.shape[0]):  
-            #                 s,e,f,d = defects[i,0]  
-            #                 start = tuple(cnt[s][0])  
-            #                 end = tuple(cnt[e][0])
-            #                 far = tuple(cnt[f][0])
-            #                 cv2.line(frame,start,end,[0,255,0],2)  
-            #                 cv2.circle(frame,far,5,[0,0,255],-1)  
+            _, contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)       
+            contours=sorted(contours,key=cv2.contourArea,reverse=True)       
+            if len(contours)>1:  
+                largestContour = contours[0]  
+                hull = cv2.convexHull(largestContour, returnPoints = False)
+                for cnt in contours[:1]:  
+                    defects = cv2.convexityDefects(cnt,hull)  
+                    if(not isinstance(defects,type(None))):
+                        fingerCount = 0
+                        for i in range(defects.shape[0]):
+                            s,e,f,d = defects[i,0]  
+                            start = tuple(cnt[s][0])  
+                            end = tuple(cnt[e][0])
+                            far = tuple(cnt[f][0])
+                            cv2.line(frame,start,end,[0,255,0],2)  
+                            cv2.circle(frame,far,5,[0,0,255],-1)
 
-            # cv2.imshow(window_name, frame)
+                            # c_squared = (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2  
+                            # a_squared = (far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2  
+                            # b_squared = (end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2  
+                            # angle = np.arccos((a_squared + b_squared  - c_squared ) / (2 * np.sqrt(a_squared * b_squared )))    
+
+                            # if angle <= np.pi / 3:  
+                            #     fingerCount += 1  
+                            #     cv2.circle(frame, far, 4, [255, 0, 255], -1)
+
+
+            cv2.imshow(window_name, frame)
             # part 2
-            output = subImg
-            cv2.imshow("ROI "+str(2), output)  
+            # output = subImg
+            # cv2.imshow("ROI "+str(2), output)  
         except:
+            print('hi')
             output = thresh
             cv2.imshow(window_name, output)
             
