@@ -50,12 +50,17 @@ while True:
     # blur the mask to help remove noise, then apply the  
     # mask to the frame  
     skinMask = cv2.GaussianBlur(skinMask, (3, 3), 0) 
-    skin = cv2.bitwise_and(src_gray, src_gray, mask = skinMask)
-    # skin = cv2.bitwise_and(frame, frame, mask = skinMask)
+    skin = cv2.bitwise_and(frame, frame, mask = skinMask)
 
     # part 1: skin
-    output = skin
 
+    gray = cv2.cvtColor(skin, cv2.COLOR_BGR2GRAY)
+    # ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU )  
+    # part 3: no thresh binary invert
+    ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_OTSU )  
+
+    # part 2: thresh
+    output = thresh
     cv2.imshow(window_name, output)
             
     k = cv2.waitKey(1) #k is the key pressed
