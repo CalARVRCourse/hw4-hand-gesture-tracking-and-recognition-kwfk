@@ -112,14 +112,14 @@ while True:
                             cv2.line(frame,start,end,[0,255,0],2)  
                             cv2.circle(frame,far,5,[0,0,255],-1)
 
-                            # c_squared = (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2  
-                            # a_squared = (far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2  
-                            # b_squared = (end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2  
-                            # angle = np.arccos((a_squared + b_squared  - c_squared ) / (2 * np.sqrt(a_squared * b_squared )))    
+                            c_squared = (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2  
+                            a_squared = (far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2  
+                            b_squared = (end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2  
+                            angle = np.arccos((a_squared + b_squared  - c_squared ) / (2 * np.sqrt(a_squared * b_squared )))    
 
-                            # if angle <= np.pi / 3:  
-                            #     fingerCount += 1  
-                            #     cv2.circle(frame, far, 4, [255, 0, 255], -1)
+                            if angle <= np.pi / 3:  
+                                fingerCount += 1  
+                                cv2.circle(frame, far, 4, [255, 0, 255], -1)
 
 
             cv2.imshow(window_name, frame)
