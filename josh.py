@@ -60,7 +60,18 @@ while True:
     ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_OTSU )  
 
     # part 2: thresh
-    output = thresh
+
+
+    ret, markers, stats, centroids = cv2.connectedComponentsWithStats(thresh,ltype=cv2.CV_16U)  
+    markers = np.array(markers, dtype=np.uint8)  
+    label_hue = np.uint8(179*markers/np.max(markers))  
+    blank_ch = 255*np.ones_like(label_hue)  
+    labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
+    labeled_img = cv2.cvtColor(labeled_img,cv2.COLOR_HSV2BGR)
+    labeled_img[label_hue==0] = 0
+
+    # part 2: labeled_img
+    output = labeled_img
     cv2.imshow(window_name, output)
             
     k = cv2.waitKey(1) #k is the key pressed
@@ -69,4 +80,3 @@ while True:
         cv2.destroyAllWindows()
         cam.release()
         break
-
