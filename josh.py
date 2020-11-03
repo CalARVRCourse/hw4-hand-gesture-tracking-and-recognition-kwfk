@@ -36,6 +36,10 @@ numContoursAvg = []
 fingerCounts = []
 prevTrackFingerAvg = None
 trackFingers = []
+prevHandXPos = None
+handXPositions = []
+
+isMouseDown = False
 
 while True:
     ret, frame = cam.read()
@@ -123,7 +127,6 @@ while True:
                 angles.append(angle)
                 if len(angles) == num_avg_frames:
                     angleAvg = np.mean(angles)
-                    # if np.mean(numContoursAvg) > 2:
                     if 'ringAngle' in sys.argv and prevAngleAvg is not None and isIncreased(angleAvg, prevAngleAvg, 30):
                         pyautogui.hotkey('command', 'r')
                         print('ring angle increase')
@@ -132,6 +135,18 @@ while True:
                         print('ring angle decrease')
                     prevAngleAvg = angleAvg
                     angles = []
+                
+                if 'mouseDown' in sys.argv and angle > 100:
+                    print('mouse down')
+                    # simple gesture: Register Mouse down/up
+                    pyautogui.mouseDown()
+                    isMouseDown = True
+                else:
+                    # simple gesture: Register Mouse down/up
+                    if isMouseDown == True:
+                        print('mouse up')
+                        pyautogui.mouseUp()
+                        isMouseDown = False
 
                 # print((x, y), (MA, ma))
                 subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB);  
@@ -155,6 +170,7 @@ while True:
                 prevHandRingArea = handRingAreaAvg
                 handRingAreas = []
 
+
             _, contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)       
             contours=sorted(contours,key=cv2.contourArea,reverse=True)       
             if len(contours)>1:  
@@ -166,6 +182,21 @@ while True:
                 cY = -250 + 3 * int(M["m01"] / M["m00"])
                 if 'pointer' in sys.argv:
                     pyautogui.moveTo(cX, cY, duration=0.02, tween=pyautogui.easeInOutQuad)
+                
+                # MOVE HAND LEFT OR RIGHT
+                xPos = cY
+                handXPositions.append(xPos)
+
+                if len(handXPositions) == num_avg_frames:
+                    handXPosAvg = np.mean(handXPositions)
+                    if 'handMove' in sys.argv and prevHandXPos is not None and isIncreased(handXPosAvg, prevHandXPos, 200):
+                        pyautogui.hotkey('down')
+                        print('down')
+                    elif 'handMove' in sys.argv and prevHandXPos is not None and isDecreased(handXPosAvg, prevHandXPos, 200):
+                        pyautogui.hotkey('up')
+                        print('up')
+                    prevHandXPos = handXPosAvg
+                    handXPositions = []
 
                 spacePressed = False
 
@@ -188,20 +219,43 @@ while True:
 
                             if angle <= np.pi / 3:
                                 fingerCount += 1
-                                cv2.circle(frame, far, 4, [255, 0, 255], -1)
+                                # cv2.circle(frame, far, 4, [255, 0, 255], -1)
                         cv2.putText(frame, "Fingers: " + str(fingerCount), (20,20), cv2.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
 
                         fingerCounts.append(fingerCount)
-                        if len(fingerCounts) == num_avg_frames + 1:
+                        if len(fingerCounts) == num_avg_frames + 4:
                             fingerCounts = fingerCounts[1:]
                         fingerCountAvg = np.mean(fingerCounts)
 
                         nearestFingerCount = round(fingerCountAvg)
                         if 'fingerTrack' in sys.argv and prevTrackFingerAvg is not None and isIncreased(nearestFingerCount, prevTrackFingerAvg, 0.9):
                             # pyautogui.hotkey('command', 'a')
-                            print('finger increase')
+                            if nearestFingerCount == 1:
+                                pyautogui.hotkey('a')
+                                print('a')
+                            elif nearestFingerCount == 2:
+                                pyautogui.hotkey('s')
+                                print('s')
+                            elif nearestFingerCount == 3:
+                                pyautogui.hotkey('d')
+                                print('d')
+                            elif nearestFingerCount == 4:
+                                pyautogui.hotkey('f')
+                                print('f')
                         elif 'fingerTrack' in sys.argv and prevTrackFingerAvg is not None and isDecreased(nearestFingerCount, prevTrackFingerAvg, 0.9):
                             # pyautogui.hotkey('command', 'c')
+                            if nearestFingerCount == 3:
+                                pyautogui.hotkey('g')
+                                print('g')
+                            elif nearestFingerCount == 2:
+                                pyautogui.hotkey('h')
+                                print('h')
+                            elif nearestFingerCount == 1:
+                                pyautogui.hotkey('j')
+                                print('j')
+                            elif nearestFingerCount == 0:
+                                pyautogui.hotkey('k')
+                                print('k')
                             print('finger decrease')
                         prevTrackFingerAvg = nearestFingerCount
                         # trackFingers.append(nearestFingerCount)
@@ -221,11 +275,11 @@ while True:
                             cntAreas.append(cv2.contourArea(largestContour))
                             if len(cntAreas) == 2:
                                 cntAreaAvg = np.mean(cntAreas)
-                                if 'handArea' in sys.argv and prevCntAreaAvg is not None and isIncreased(cntAreaAvg, prevCntAreaAvg, 2000):
-                                    # pyautogui.hotkey('command', '+')
+                                if 'handArea' in sys.argv and prevCntAreaAvg is not None and isIncreased(cntAreaAvg, prevCntAreaAvg, 3000):
+                                    pyautogui.hotkey('command', 'up')
                                     print('area increase')
-                                elif 'handArea' in sys.argv and prevCntAreaAvg is not None and isDecreased(cntAreaAvg, prevCntAreaAvg, 2000):
-                                    # pyautogui.hotkey('command', '-')
+                                elif 'handArea' in sys.argv and prevCntAreaAvg is not None and isDecreased(cntAreaAvg, prevCntAreaAvg, 3000):
+                                    pyautogui.hotkey('command', 'down')
                                     print('area decrease')
                                 prevCntAreaAvg = cntAreaAvg
                                 cntAreas = []
@@ -244,8 +298,8 @@ while True:
 
 
                         if 'space' in sys.argv and fingerCountAvg < 0.5 and not spacePressed:
-                            # pyautogui.press('space')
-                            pyautogui.click()
+                            pyautogui.press('s')
+                            # pyautogui.click()
                             print('space')
                             spacePressed = True
                         else:
