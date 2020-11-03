@@ -2,11 +2,11 @@ import cv2
 import argparse
 import numpy as np
 import pyautogui
+import sys
 
 window_name = 'Hand Tracker'
 isColor = False
 max_binary_value = 255
-useGesture = True
 
 def nothing(x):
     pass
@@ -26,11 +26,16 @@ cv2.namedWindow(window_name)
 
 num_avg_frames = 4
 
+prevCntAreaAvg = None
+cntAreas = []
 prevHandRingArea = None
 handRingAreas = []
 prevAngleAvg = None
 angles = []
 numContoursAvg = []
+fingerCounts = []
+prevTrackFingerAvg = None
+trackFingers = []
 
 while True:
     ret, frame = cam.read()
@@ -45,18 +50,18 @@ while True:
         
     lower_HSV = np.array([0, 60, 0], dtype = "uint8")  
     upper_HSV = np.array([25, 255, 255], dtype = "uint8")  
-      
+    
     convertedHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)  
     skinMaskHSV = cv2.inRange(convertedHSV, lower_HSV, upper_HSV)  
-      
-      
+    
+    
     lower_YCrCb = np.array((0, 138, 67), dtype = "uint8")  
     upper_YCrCb = np.array((255, 179, 133), dtype = "uint8")  
-          
+        
     convertedYCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)  
     skinMaskYCrCb = cv2.inRange(convertedYCrCb, lower_YCrCb, upper_YCrCb)  
 
-      
+    
     skinMask = cv2.add(skinMaskHSV,skinMaskYCrCb) 
 
     # bgModel = cv2.createBackgroundSubtractorMOG2(0, 50)
@@ -66,7 +71,7 @@ while True:
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))  
     skinMask = cv2.erode(skinMask, kernel, iterations = 2)  
     skinMask = cv2.dilate(skinMask, kernel, iterations = 2)  
-      
+    
     # blur the mask to help remove noise, then apply the  
     # mask to the frame  
     skinMask = cv2.GaussianBlur(skinMask, (3, 3), 0) 
@@ -92,7 +97,7 @@ while True:
 
     # part 2: labeled_img
 
-    if (ret>2):  
+    if (ret>2):
         try:
             statsSortedByArea = stats[np.argsort(stats[:, 4])]
             roi = statsSortedByArea[-3][0:4]  
@@ -116,23 +121,22 @@ while True:
                 (x,y),(MA,ma),angle = cv2.fitEllipse(cnt)
 
                 angles.append(angle)
-
                 if len(angles) == num_avg_frames:
                     angleAvg = np.mean(angles)
-                    if np.mean(numContoursAvg) > 2:
-                        if prevAngleAvg is not None and isIncreased(angleAvg, prevAngleAvg, 30):
-                            pyautogui.hotkey('command', 'r')
-                            print('angle increase')
-                        elif prevAngleAvg is not None and isDecreased(angleAvg, prevAngleAvg, 30):
-                            pyautogui.hotkey('command', 'l')
-                            print('angle decrease')
+                    # if np.mean(numContoursAvg) > 2:
+                    if 'ringAngle' in sys.argv and prevAngleAvg is not None and isIncreased(angleAvg, prevAngleAvg, 30):
+                        pyautogui.hotkey('command', 'r')
+                        print('ring angle increase')
+                    elif 'ringAngle' in sys.argv and prevAngleAvg is not None and isDecreased(angleAvg, prevAngleAvg, 30):
+                        pyautogui.hotkey('command', 'l')
+                        print('ring angle decrease')
                     prevAngleAvg = angleAvg
                     angles = []
 
                 # print((x, y), (MA, ma))
                 subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB);  
                 subImg = cv2.ellipse(subImg,ellipseParam,(0,255,0),2)  
-              
+            
             subImg = cv2.resize(subImg, (0,0), fx=3, fy=3)
 
             # ZOOM IN ZOOM OUT WITH HAND RING
@@ -142,12 +146,12 @@ while True:
             if len(handRingAreas) == num_avg_frames:
                 handRingAreaAvg = np.mean(handRingAreas)
                 if np.mean(numContoursAvg) > 2:
-                    if prevHandRingArea is not None and isIncreased(handRingAreaAvg, prevHandRingArea, 500):
+                    if 'ringArea' in sys.argv and prevHandRingArea is not None and isIncreased(handRingAreaAvg, prevHandRingArea, 500):
                         pyautogui.hotkey('command', '+')
-                        print('area increase')
-                    elif prevHandRingArea is not None and isDecreased(handRingAreaAvg, prevHandRingArea, 500):
+                        print('ring area increase')
+                    elif 'ringArea' in sys.argv and prevHandRingArea is not None and isDecreased(handRingAreaAvg, prevHandRingArea, 500):
                         pyautogui.hotkey('command', '-')
-                        print('area decrease')
+                        print('ring area decrease')
                 prevHandRingArea = handRingAreaAvg
                 handRingAreas = []
 
@@ -157,11 +161,11 @@ while True:
                 largestContour = contours[0]  
                 hull = cv2.convexHull(largestContour, returnPoints = False)
 
-                # if useGesture:
                 M = cv2.moments(largestContour)
                 cX = -10 + 3 * int(M["m10"] / M["m00"])
                 cY = -250 + 3 * int(M["m01"] / M["m00"])
-                pyautogui.moveTo(cX, cY, duration=0.02, tween=pyautogui.easeInOutQuad)
+                if 'pointer' in sys.argv:
+                    pyautogui.moveTo(cX, cY, duration=0.02, tween=pyautogui.easeInOutQuad)
 
                 spacePressed = False
 
@@ -182,20 +186,70 @@ while True:
                             b_squared = (end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2  
                             angle = np.arccos((a_squared + b_squared  - c_squared ) / (2 * np.sqrt(a_squared * b_squared )))    
 
-                            if angle <= np.pi / 3:  
-                                fingerCount += 1  
+                            if angle <= np.pi / 3:
+                                fingerCount += 1
                                 cv2.circle(frame, far, 4, [255, 0, 255], -1)
                         cv2.putText(frame, "Fingers: " + str(fingerCount), (20,20), cv2.FONT_HERSHEY_COMPLEX,0.5,(0,255,0),1)
 
-                        # if fingerCount == 1:
+                        fingerCounts.append(fingerCount)
+                        if len(fingerCounts) == num_avg_frames + 1:
+                            fingerCounts = fingerCounts[1:]
+                        fingerCountAvg = np.mean(fingerCounts)
+
+                        nearestFingerCount = round(fingerCountAvg)
+                        if 'fingerTrack' in sys.argv and prevTrackFingerAvg is not None and isIncreased(nearestFingerCount, prevTrackFingerAvg, 0.9):
+                            # pyautogui.hotkey('command', 'a')
+                            print('finger increase')
+                        elif 'fingerTrack' in sys.argv and prevTrackFingerAvg is not None and isDecreased(nearestFingerCount, prevTrackFingerAvg, 0.9):
+                            # pyautogui.hotkey('command', 'c')
+                            print('finger decrease')
+                        prevTrackFingerAvg = nearestFingerCount
+                        # trackFingers.append(nearestFingerCount)
+                        # if len(trackFingers) == num_avg_frames:
+                        #     trackFingerAvg = np.mean(trackFingers)
+                        #     if 'fingerTrack' in sys.argv and prevTrackFingerAvg is not None and isIncreased(trackFingerAvg, prevTrackFingerAvg, 0.9):
+                        #         # pyautogui.hotkey('command', 'a')
+                        #         print('finger increase')
+                        #     elif 'fingerTrack' in sys.argv and prevTrackFingerAvg is not None and isDecreased(trackFingerAvg, prevTrackFingerAvg, 0.9):
+                        #         # pyautogui.hotkey('command', 'c')
+                        #         print('finger decrease')
+                        #     prevTrackFingerAvg = trackFingerAvg
+                        #     trackFingers = []
 
 
-                        # if useGesture:
-                        # if fingerCount == 0 and not spacePressed:
-                        #     pyautogui.press('space')
-                        #     spacePressed = True
-                        # else:
-                        #     spacePressed = False
+                        if fingerCountAvg < 5.5 and fingerCountAvg > 3.5: 
+                            cntAreas.append(cv2.contourArea(largestContour))
+                            if len(cntAreas) == 2:
+                                cntAreaAvg = np.mean(cntAreas)
+                                if 'handArea' in sys.argv and prevCntAreaAvg is not None and isIncreased(cntAreaAvg, prevCntAreaAvg, 2000):
+                                    # pyautogui.hotkey('command', '+')
+                                    print('area increase')
+                                elif 'handArea' in sys.argv and prevCntAreaAvg is not None and isDecreased(cntAreaAvg, prevCntAreaAvg, 2000):
+                                    # pyautogui.hotkey('command', '-')
+                                    print('area decrease')
+                                prevCntAreaAvg = cntAreaAvg
+                                cntAreas = []
+                        
+                        # if len(angles) == num_avg_frames:
+                        #     angleAvg = np.mean(angles)
+                        #     if np.mean(numContoursAvg) > 2:
+                        #         if prevAngleAvg is not None and isIncreased(angleAvg, prevAngleAvg, 30):
+                        #             pyautogui.hotkey('command', 'r')
+                        #             print('angle increase')
+                        #         elif prevAngleAvg is not None and isDecreased(angleAvg, prevAngleAvg, 30):
+                        #             pyautogui.hotkey('command', 'l')
+                        #             print('angle decrease')
+                        #     prevAngleAvg = angleAvg
+                        #     angles = []
+
+
+                        if 'space' in sys.argv and fingerCountAvg < 0.5 and not spacePressed:
+                            # pyautogui.press('space')
+                            pyautogui.click()
+                            print('space')
+                            spacePressed = True
+                        else:
+                            spacePressed = False
                     
                     # if useGesture:
                     #     (x, y), (MA, ma), angle = cv2.fitEllipse(cnt)
